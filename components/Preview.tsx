@@ -31,6 +31,7 @@ export const Preview = () => {
 		.then(function makeImage(dataUrl: any) {
 			const img = new Image()
 			dispatch(updatePreviewUrl(dataUrl))
+			// console.log(dataUrl,".....///")
 			img.src = dataUrl
 		})
 		.catch(function (error: any) {

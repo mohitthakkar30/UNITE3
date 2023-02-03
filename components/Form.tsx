@@ -11,6 +11,8 @@ import {
   addLeadName,
   addContributionPower
 } from "../features/collabInfo";
+import { ethers } from 'ethers';
+import lighthouse from '@lighthouse-web3/sdk';
 import { mintAndTransfer } from "../features/mintAndTransfer";
 import {
   uploadImage,
@@ -30,9 +32,28 @@ import {
 } from "@metaplex-foundation/js";
 import { Connection, clusterApiUrl, PublicKey } from "@solana/web3.js";
 import styles from '../styles/Form.module.css'
+import nft1 from '../public/nft.png'
 export const Form = () => {
-  const { publicKey, connected, connect } = useWallet();
+  
 
+  const progressCallback = (progressData: any) => {
+    // let percentageDone =
+    //   100 - (progressData?.total / progressData?.uploaded)?.toFixed(2);
+    // currentProgressFunction(percentageDone);
+  };
+  
+  const uploadedFile = async (uploadedFiles: any) => {
+    console.log('first', uploadedFiles);
+
+    uploadedFiles.persist();
+    const uploadResponse = await lighthouse.upload(
+      uploadedFiles,
+      'fcd31a18-38dc-4338-bccd-743190e1017f',
+      progressCallback
+       );
+    return uploadResponse;
+    }
+  const { publicKey, connected, connect } = useWallet();
   const [form, setForm] = useState<boolean>(false);
   const [success, setSuccess] = useState<boolean>(false);
   const [name, setMemberName] = useState<string>("");
@@ -73,16 +94,32 @@ export const Form = () => {
 
   const AddMember = () => {
     const a = { name, role, memberAddress, xp, ipfsHash, minted, nft };
-    try {
-      const isValidWallet = PublicKey.isOnCurve(new PublicKey(a.memberAddress));
-      if (isValidWallet) {
-        dispatch(addNewMember(a));
+    const { utils } = require('ethers');
+
+if (!utils.isHexString(a.memberAddress)) {
+    return false;
+  }
+
+  try {
+    const addressBytes = utils.hexDataSlice(a.memberAddress, 0, 20);
+    const checksumAddress = utils.getAddress(addressBytes);
+    dispatch(addNewMember(a));
         setDefault();
-      }
-    } catch (error) {
-      alert("Member's wallet is invalid...");
+    // return a.memberAddress === checksumAddress;
+  } catch (error) {
+    alert("Member's wallet is invalid...");
       setDefault();
-    }
+  }
+
+
+    // try {
+    //   const isValidWallet = PublicKey.isOnCurve(new PublicKey(a.memberAddress));
+    //   if (isValidWallet) {
+        
+    //   }
+    // } catch (error) {
+      
+    // }
   };
 
   const RemoveMember = (address: string) => {
@@ -100,7 +137,7 @@ export const Form = () => {
     setSuccess(a);
   };
 
-  function dataURLtoFile(dataurl, filename) {
+  async function dataURLtoFile(dataurl, filename) {
     var arr = dataurl.split(","),
       mime = arr[0].match(/:(.*?);/)[1],
       bstr = atob(arr[1]),
@@ -114,22 +151,26 @@ export const Form = () => {
 
   const sendData = async () => {
     setLoading(true);
-    const bundlrStorage = metaplex.storage().driver() as BundlrStorageDriver;
-    (await bundlrStorage.bundlr()).fund(1000);
-    const solSig = await airdropSol(wallet, connection);
-    var file = dataURLtoFile(PreviewUrl, "a.png");
-    const files: MetaplexFile = await toMetaplexFileFromBrowser(file);
 
-    const metadataUri = await collabNftMetadata(
-      Title,
-      Description,
-      GitHub,
-      files,
-      metaplex,
-      ContributionPower,
-    );
-    console.log("Here ===> ", metadataUri);
-    await creteNfts(metadataUri.uri, Title, ContributionPower , GitHub ,metaplex, Members);
+    // const bundlrStorage = metaplex.storage().driver() as BundlrStorageDriver;
+    // (await bundlrStorage.bundlr()).fund(1000);
+    // const solSig = await airdropSol(wallet, connection);
+    var file = await dataURLtoFile(PreviewUrl, "nft.png");
+    console.log("File", file)
+    await uploadedFile(file);
+
+    // const files: MetaplexFile = await toMetaplexFileFromBrowser(file);
+
+    // const metadataUri = await collabNftMetadata(
+    //   Title,
+    //   Description,
+    //   GitHub,
+    //   files,
+    //   metaplex,
+    //   ContributionPower,
+    // );
+    // console.log("Here ===> ", metadataUri);
+    // await creteNfts(metadataUri.uri, Title, ContributionPower , GitHub ,metaplex, Members);
     setLoading(false);
   };
   return (

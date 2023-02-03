@@ -22,6 +22,7 @@ async function airdropSol(wallet, connection) {
 }
 
 async function uploadImage(dataSrc) {
+	
 	let ipfs: IPFSHTTPClient | undefined
 	try {
 		ipfs = create({
