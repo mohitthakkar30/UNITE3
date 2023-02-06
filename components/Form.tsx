@@ -36,8 +36,22 @@ import { Connection, clusterApiUrl, PublicKey } from "@solana/web3.js";
 import styles from '../styles/Form.module.css'
 import {Web3Storage} from 'web3.storage'
 import ABI from './ABI'
+import { create } from 'ipfs-http-client'
+
 export const Form = () => {
-  
+
+const projectId = '2EV1ulwPt2WecnTSBjILUic8pg9';
+const projectSecret = '964e43a1d4b789850dc353736a74ffc3';
+const auth = 'Basic ' + Buffer.from(projectId + ':' + projectSecret).toString('base64');
+const client = create({
+  host: 'ipfs.infura.io',
+  port: 5001,
+  protocol: 'https',
+  apiPath: '/api/v0',
+  headers: {
+    authorization: auth,
+  }
+})
 
 
   const { publicKey, connected, connect } = useWallet();
@@ -190,8 +204,17 @@ const provider = ethers.getDefaultProvider()
     setLoading(true);
     var file = await dataURLtoFile(PreviewUrl, "nft.png");
     console.log("File",typeof file)
+
+    const added = await client.add(file)
+      const url = `https://collab-nft.infura-ipfs.io/ipfs/${added.path}`
+      // updateFileUrl(url)
+
+    console.log("Added -> ", added.path);
+    
+
+
      // @ts-ignore: Object is possibly 'null'
-   const client =  await uploadImage(file);
+  //  const client =  await uploadImage(file);
     // @ts-ignore: Object is possibly 'null'
   //  const cid = await client.put(file);
   //  console.log('Cid ',cid);
@@ -204,7 +227,7 @@ const provider = ethers.getDefaultProvider()
   console.log("Check =====>",contract);
   console.log("signer => ",signer);
   
-  const response = await contract.safeMint("0x2B5eBa3377E57d333498653bcae8979A05b7c5e1", client);
+  const response = await contract.safeMint("0x2B5eBa3377E57d333498653bcae8979A05b7c5e1", url);
 console.log("Response ", response);
     setLoading(false);
   };
