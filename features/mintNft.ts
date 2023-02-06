@@ -14,6 +14,7 @@ import * as IPFS from 'ipfs-core';
 import { encode } from 'punycode'
 import { buffer } from 'stream/consumers'
 import { Web3Storage } from 'web3.storage'
+import lighthouse from '@lighthouse-web3/sdk';
 
 async function airdropSol(wallet, connection) {
 	const airdropSignature = await connection.requestAirdrop(
@@ -29,13 +30,29 @@ function getAccessToken() {
   }
 
 async function uploadImage(dataSrc) {
-		const ipfs = await IPFS.create();
-		const result = await ipfs.add(dataSrc);
-		const cid = result.cid
-		const gateway = 'https://ipfs.io/ipfs/'
-		const Link = gateway+cid;
-    	console.log("Link ",Link);
-	return Link;
+	const progressCallback = (progressData) => {
+		// let percentageDone =
+		//   100 - (progressData?.total / progressData?.uploaded)?.toFixed(2);
+		// console.log(percentageDone);
+	  };
+	
+	  const deploy = async(e) =>{
+		// Push file to lighthouse node
+		// Both file and folder supported by upload function
+		const output = await lighthouse.upload(e, "YOUR_API_KEY", progressCallback);
+		console.log('File Status:', output);
+		/*
+		  output:
+			{
+			  Name: "filename.txt",
+			  Size: 88000,
+			  Hash: "QmWNmn2gr4ZihNPqaC5oTeePsHvFtkWNpjY3cD6Fd5am1w"
+			}
+		  Note: Hash in response is CID.
+		*/
+	
+		  console.log('Visit at https://gateway.lighthouse.storage/ipfs/' + output.data.Hash);
+	  }
 	// return gateway+cid
 	// let ipfs: IPFSHTTPClient | undefined
 	// try {
