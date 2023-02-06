@@ -4,6 +4,7 @@ import { BsExclamationCircleFill } from "react-icons/bs";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import member, { addNewMember, removeMember } from "../features/member";
 import { AdminSuccess } from "./AdminSuccess";
+import IPFS from "ipfs-core"
 import {
   addCollabName,
   addDescription,
@@ -11,8 +12,8 @@ import {
   addLeadName,
   addContributionPower
 } from "../features/collabInfo";
+import { useSigner, useContract,useProvider } from "wagmi";
 import { ethers } from 'ethers';
-import lighthouse from '@lighthouse-web3/sdk';
 import { mintAndTransfer } from "../features/mintAndTransfer";
 import {
   uploadImage,
@@ -32,27 +33,12 @@ import {
 } from "@metaplex-foundation/js";
 import { Connection, clusterApiUrl, PublicKey } from "@solana/web3.js";
 import styles from '../styles/Form.module.css'
-import nft1 from '../public/nft.png'
+import {Web3Storage} from 'web3.storage'
+import ABI from './ABI'
 export const Form = () => {
   
 
-  const progressCallback = (progressData: any) => {
-    // let percentageDone =
-    //   100 - (progressData?.total / progressData?.uploaded)?.toFixed(2);
-    // currentProgressFunction(percentageDone);
-  };
-  
-  const uploadedFile = async (uploadedFiles: any) => {
-    console.log('first', uploadedFiles);
 
-    uploadedFiles.persist();
-    const uploadResponse = await lighthouse.upload(
-      uploadedFiles,
-      'fcd31a18-38dc-4338-bccd-743190e1017f',
-      progressCallback
-       );
-    return uploadResponse;
-    }
   const { publicKey, connected, connect } = useWallet();
   const [form, setForm] = useState<boolean>(false);
   const [success, setSuccess] = useState<boolean>(false);
@@ -76,7 +62,7 @@ export const Form = () => {
   const ContributionPower = useAppSelector((state) => state.collabInfo.ContributionPower);
   const PreviewUrl = useAppSelector((state) => state.previewInfo.previewUrl);
   const dispatch = useAppDispatch();
-
+  // const provider = useProvider();
   const wallet = useWallet();
 
   const connection = new Connection(clusterApiUrl("devnet"));
@@ -91,19 +77,21 @@ export const Form = () => {
       timeout: 60000,
     })
   );
-
+var MemberAddress: string;
   const AddMember = () => {
     const a = { name, role, memberAddress, xp, ipfsHash, minted, nft };
     const { utils } = require('ethers');
 
 if (!utils.isHexString(a.memberAddress)) {
-    return false;
+    
+  return false;
   }
 
   try {
     const addressBytes = utils.hexDataSlice(a.memberAddress, 0, 20);
     const checksumAddress = utils.getAddress(addressBytes);
     dispatch(addNewMember(a));
+    MemberAddress = a.memberAddress;
         setDefault();
     // return a.memberAddress === checksumAddress;
   } catch (error) {
@@ -148,29 +136,65 @@ if (!utils.isHexString(a.memberAddress)) {
     }
     return new File([u8arr], filename, { type: mime });
   }
+ 
+  function getAccessToken() {
+    // console.log(process.env.NEXT_PUBLIC_WEB3STORAGE_TOKEN);
+    return process.env.WEB3STORAGE_TOKEN_APIKEY;
+  }
 
+ function accesstoken() {
+	// 	const ipfs = await IPFS.create();
+	// 	const result = await ipfs.add(dataSrc);
+	// 	const cid = result.cid
+	// 	const gateway = 'https://ipfs.io/ipfs/'
+    // 	console.log("Link ",gateway+cid);
+	
+	// return gateway+cid
+	// let ipfs: IPFSHTTPClient | undefined
+	// try {
+	// 	ipfs = create({
+	// 		url: 'https://ipfs.infura.io:5001/api/v0',
+	// 	})
+	// } catch (error) {
+	// 	console.error('IPFS error ', error)
+	// 	ipfs = undefined
+	// }
+
+	// const result = await (ipfs as IPFSHTTPClient).add(dataSrc)
+	// const cid = result.cid
+	// const path = result.path
+	// const url = `https://ipfs.infura.io/ipfs/${path}`
+	// 	console.log("Link ", url)
+	// return url
+
+	const accessToken = getAccessToken() as string;
+    // console.log("accessToken", accessToken);
+    const store = new Web3Storage({ token: accessToken });
+    return store
+
+}	
+const contractAddress = '0xa1030a0050D80bE4167AE2AF6409812Af9f013Fe';
+// const {data:signer} = useSigner()
+// const contract = useContract({
+//   address: contractAddress,
+//   abi: ABI,
+//   signerOrProvider: signer || provider,
+//   });
+const provider = new ethers.providers.Web3Provider(window.ethereum)
+const signer = provider.getSigner();
+const contract = new ethers.Contract( contractAddress , ABI ,signer)
   const sendData = async () => {
     setLoading(true);
-
-    // const bundlrStorage = metaplex.storage().driver() as BundlrStorageDriver;
-    // (await bundlrStorage.bundlr()).fund(1000);
-    // const solSig = await airdropSol(wallet, connection);
     var file = await dataURLtoFile(PreviewUrl, "nft.png");
-    console.log("File", file)
-    await uploadedFile(file);
-
-    // const files: MetaplexFile = await toMetaplexFileFromBrowser(file);
-
-    // const metadataUri = await collabNftMetadata(
-    //   Title,
-    //   Description,
-    //   GitHub,
-    //   files,
-    //   metaplex,
-    //   ContributionPower,
-    // );
-    // console.log("Here ===> ", metadataUri);
-    // await creteNfts(metadataUri.uri, Title, ContributionPower , GitHub ,metaplex, Members);
+    console.log("File",typeof file)
+     // @ts-ignore: Object is possibly 'null'
+   const client =  await uploadImage(file);
+    // @ts-ignore: Object is possibly 'null'
+  //  const cid = await client.put(file);
+  //  console.log('Cid ',cid);
+console.log("Check =====>",contract);
+   const response = await contract.safeMint(MemberAddress, client);
+console.log("Response ", response);
     setLoading(false);
   };
   return (
@@ -341,9 +365,10 @@ if (!utils.isHexString(a.memberAddress)) {
                 </svg>
               )}
             <button
-              onClick={async () => {
+              onClick={async (e) => {
                 await sendData();
                 setSuccess(true);
+                // await uploadedFile(e);
               }}
               className={styles.btn}
             >

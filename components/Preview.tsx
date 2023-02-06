@@ -22,13 +22,14 @@ export const Preview = () => {
 	const memberCount = useAppSelector(
 		(state) => state.FormReducers.memberCount
 	)
+
 	const collabTitle = useAppSelector((state) => state.collabInfo.collabName)
 	const dispatch = useAppDispatch()
 	const node = useRef<HTMLDivElement>(null!)
 
 	domtoimage
 		.toPng(node.current)
-		.then(function makeImage(dataUrl: any) {
+		.then(async function makeImage(dataUrl: any) {
 			const img = new Image()
 			dispatch(updatePreviewUrl(dataUrl))
 			// console.log(dataUrl,".....///")
